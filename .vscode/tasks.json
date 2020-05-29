@@ -1,0 +1,12 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "run tests",
+            "type": "shell",
+            "command": "pytest --cov=./ --cov-report xml:cov.xml ./",
+            "group": "build",
+            "problemMatcher": []
+        }
+    ]
+}
