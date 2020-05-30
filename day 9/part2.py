@@ -6,6 +6,6 @@ with open("c:\\projects\\aoc2019\\day 9\\inputs.txt", "r") as inputs:
     
     ic = Intcomputer(intcode, "BOOST", Intcomputer.IN_INTERNAL_LIST, Intcomputer.OUT_STDOUT)
     
-    ic.list_input(1)
+    ic.list_input(2)
     
     ic.run()
