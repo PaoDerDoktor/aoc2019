@@ -258,7 +258,6 @@ class Intcomputer(object):
         """Executes jump-if-true operation"""
 
         if (self._resolve_arg(0) != 0):
-            print(self._resolve_arg(0), self.ram[self.ptr+1])
             self.ptr = self._resolve_arg(1)
         else:
             self.ptr += 3
