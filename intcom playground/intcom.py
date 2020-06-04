@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Dict, List, Union
+from multiprocessing import Process
 from multiprocessing.connection import PipeConnection
 from io import TextIOWrapper
 from sys import stdin, stdout
@@ -340,8 +341,24 @@ class Intcom(object):
             self._execute()
             
     # FUNCTIONS
+
     
 def list_to_dict(l: List[int]) -> Dict[int, int]:
     """Takes an intcode as a list, and returns it as a dict ready to init an intcomputer's ram."""
 
     return {i: l[i] for i in range(len(l))}
+
+
+def _run_piped_intcom(intcode: Dict[int, int], inPipe: PipeConnection, outPipe: PipeConnection) -> None:
+    """Runs a computer specifically created"""
+
+    ic: Intcomputer = Intcom(intcode, "Piped Intcom",
+                             IO_METHOD.PIPE, IO_METHOD.PIPE,
+                             inPipe, outPipe)
+    ic.run()
+
+
+def piped_intcom_as_a_process(intcode: Dict[int, int], inPipe: PipeConnection, outPipe: PipeConnection) -> Process:
+    """Returns a process ready to run specified intcode, I/O made by passed pipes"""
+
+    return Process(target=_run_piped_intcom, args=(intcode, inPipe, outPipe))
