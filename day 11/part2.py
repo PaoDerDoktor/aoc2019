@@ -3,6 +3,7 @@ from intcom import *
 from multiprocessing import Pipe, Process
 from multiprocessing.connection import Connection
 from time import sleep
+from sys import maxsize
 
 
 class HPRobot(object):
@@ -23,7 +24,7 @@ class HPRobot(object):
         self.location: Tuple[int, int] = (0, 0)
         self.directionVector: Tuple[int, int] = (0, 1)
 
-        self.grid: Dict[int, Dict[int, str]] = {0: {0: '.'}}
+        self.grid: Dict[int, Dict[int, str]] = {0: {0: '#'}}
 
     def _get_camera_output(self) -> int:
         """Returns camera output of current location"""
@@ -91,7 +92,36 @@ class HPRobot(object):
             self._move_to_next()
         
         self.brain.join()
+        
 
+def save_dict_grid_as_PPM(grid: Dict[int, Dict[int, str]]) -> None:
+    maxX: int = max(grid.keys())
+    minX: int = min(grid.keys())
+    maxY: int = -1
+    minY: int = maxsize
+    
+    for row in grid:
+        for y in grid[row]:
+            if maxY < y:
+                maxY = y
+            if minY > y:
+                minY = y
+    
+    width: int = maxX - minX
+    height: int = maxY - minY
+    
+    with open("part2_output.ppm", "w") as imageFile:
+        imageFile.write("P1\n"+str(width)+"\n"+str(height)+"\n")
+        
+        for y in range(maxY, minY-1, -1):
+            for x in range(minX, maxX+1):
+                if x not in grid:
+                    imageFile.write("1\n")
+                elif y not in grid[x]:
+                    imageFile.write("1\n")
+                else:
+                    imageFile.write(str(int(grid[x][y] == '.'))+"\n")
+    
 
 if __name__ == '__main__':
     with open("c:\\projects\\aoc2019\\day 11\\inputs.txt", "r") as inputs:
@@ -106,3 +136,5 @@ if __name__ == '__main__':
             total += len(robot.grid[x])
 
         print(total)
+
+        save_dict_grid_as_PPM(robot.grid)
