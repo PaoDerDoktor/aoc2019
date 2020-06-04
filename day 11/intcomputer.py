@@ -32,6 +32,12 @@ class Intcomputer(object):
     OUT_STDOUT = 0
     OUT_INTERNAL_LIST = 1
     OUT_PIPE = 2
+    
+    # States
+    
+    STATE_RUNNING = 0
+    STATE_HALTED = 1
+    STATE_ERROR = 2
 
     def __init__(self, intcode: Dict[int, int], name: str = "default_computer",
                  inputMethod: int = 0,  # IN_STDIN
@@ -84,6 +90,10 @@ class Intcomputer(object):
             self.output: Connection = Pipe()[0]
         else:
             raise NotImplementedError(f"INVALID OUTPUT MODE : {outputMethod}")
+        
+        # Defining shallow state pipe
+        
+        self.statePipe: Connection = Pipe()[0]
 
     def set_in_pipe_connection(self, inConnection: Connection) -> None:
         """Sets input pipe connection if in IN_PIPE mode"""
@@ -100,6 +110,11 @@ class Intcomputer(object):
             self.output = outConnection
         else:
             raise ValueError(f"ERROR : OUTPUT IS NOT IN PIPE MODE")
+        
+    def set_state_pipe_connection(self, stateConection: Connection) -> None:
+        """Sets state pipe connection"""
+        
+        self.statePipe = stateConection
 
     def _in_from_stdin(self) -> int:
         return int(input("Input  <-- "))
@@ -176,7 +191,6 @@ class Intcomputer(object):
 
     def _write(self, value: int, addr: int) -> None:
         """Writes specified value at specified address in RAM"""
-
         if addr < 0:
             raise IndexError(
                 f"RAM ACCESS ERROR : INDEX CAN'T BE NEGATIVE ({addr}) @ {self.ptr} == {self.ram[self.ptr]}")
@@ -200,7 +214,7 @@ class Intcomputer(object):
                 f"INVALID PARAMETER MODE : {mode} @ {self.ptr}")
 
     def _resolve_write_addr_arg(self, argNumber: int) -> int:
-        """Fetch given argument's value as an address where to write data"""
+        """Fetch given argument's value as an adress where to write data"""
 
         mode: int = self.argModes[argNumber]
         value: int = self.args[argNumber]
@@ -215,19 +229,6 @@ class Intcomputer(object):
         else:  # ------------------------ Error
             raise NotImplementedError(
                 f"INVALID PARAMETER MODE : {mode} @ {self.ptr}")
-
-    def _resolve_move_arg(self, argNumber: int) -> int:
-        """Fetch given argument's value as an address to move to"""
-        
-        mode: int = self.argModes[argNumber]
-        value: int = self.args[argNumber]
-        
-        if mode == 0 or mode == 1:
-            return value
-        elif mode == 2:
-            return value + self.relativeBasePtr
-        else:
-            raise NotImplementedError(f"INVALID PARAMETER MODE : {mode} @ {self.ptr}")
 
     def _add(self) -> None:
         """Executes addition operation"""
@@ -281,7 +282,7 @@ class Intcomputer(object):
         """Executes jump-if-true operation"""
 
         if (self._resolve_arg(0) != 0):
-            self.ptr = self._resolve_move_arg(1)
+            self.ptr = self._resolve_arg(1)
         else:
             self.ptr += 3
 
@@ -289,7 +290,7 @@ class Intcomputer(object):
         """Executes jump-if-false operation"""
 
         if (self._resolve_arg(0) == 0):
-            self.ptr = self._resolve_move_arg(1)
+            self.ptr = self._resolve_arg(1)
         else:
             self.ptr += 3
 
@@ -335,51 +336,76 @@ class Intcomputer(object):
 
     def run(self) -> None:
         """Runs the intcode"""
-
         while not self.halt:
             self._fetch()
-
+            
             if (self.opcode == self.OP_ADD):
+                print("add")
+                self.statePipe.send(Intcomputer.STATE_RUNNING)
                 self._add()
             elif (self.opcode == self.OP_MUL):
+                print("mul")
+                self.statePipe.send(Intcomputer.STATE_RUNNING)
                 self._mul()
             elif (self.opcode == self.OP_IN):
+                print("in")
+                self.statePipe.send(Intcomputer.STATE_RUNNING)
                 self._in()
             elif (self.opcode == self.OP_OUT):
+                print("out")
+                self.statePipe.send(Intcomputer.STATE_RUNNING)
                 self._out()
             elif (self.opcode == self.OP_JIT):
+                print("jit")
+                self.statePipe.send(Intcomputer.STATE_RUNNING)
                 self._jit()
             elif (self.opcode == self.OP_JIF):
+                print("jif")
+                self.statePipe.send(Intcomputer.STATE_RUNNING)
                 self._jif()
             elif (self.opcode == self.OP_LT):
+                print("lt")
+                self.statePipe.send(Intcomputer.STATE_RUNNING)
                 self._lt()
             elif (self.opcode == self.OP_EQ):
+                print("eq")
+                self.statePipe.send(Intcomputer.STATE_RUNNING)
                 self._eq()
             elif (self.opcode == self.OP_URB):
+                print("urb")
+                self.statePipe.send(Intcomputer.STATE_RUNNING)
                 self._urb()
             elif (self.opcode == self.OP_HALT):
+                print("halt")
+                self.statePipe.send(Intcomputer.STATE_HALTED)
                 self._halt()
             else:
+                self.statePipe.send(Intcomputer.STATE_ERROR)
                 raise NotImplementedError(
                     f"INVALID OPCODE : {self.opcode} @ {self.ptr}")
+                
+        self.input.close()
+        self.output.close()
+        self.statePipe.close()
 
     # FUNCTIONS
 
 
-def _run_piped_intcomputer(intcode: List[int], inPipe: Connection, outPipe: Connection) -> None:
+def _run_piped_intcomputer(intcode: List[int], inPipe: Connection, outPipe: Connection, statePipe: Connection) -> None:
     """Runs a computer specifically created"""
 
     ic: Intcomputer = Intcomputer(
         intcode, "piped computer", Intcomputer.IN_PIPE, Intcomputer.OUT_PIPE)
+    ic.set_state_pipe_connection(statePipe)
     ic.set_in_pipe_connection(inPipe)
     ic.set_out_pipe_connection(outPipe)
     ic.run()
 
 
-def piped_intcomputer_as_a_process(intcode: List[int], in_pipe: Connection, out_pipe: Connection) -> Process:
+def piped_intcomputer_as_a_process(intcode: List[int], inPipe: Connection, outPipe: Connection, statePipe: Connection) -> Process:
     """Returns a process ready to run specified intcode, I/O made by passed pipes"""
 
-    return Process(target=_run_piped_intcomputer, args=(intcode, in_pipe, out_pipe))
+    return Process(target=_run_piped_intcomputer, args=(intcode, inPipe, outPipe, statePipe))
 
 
 def list_to_dict(l: List[int]) -> Dict[int, int]:

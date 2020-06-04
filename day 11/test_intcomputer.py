@@ -88,14 +88,14 @@ def test_fifo_internal_list() -> None:
 
 
 def test_jit() -> None:
-    ic = Intcomputer(list_to_dict([105, 1, 6, 104, 0, 99, 105, 0, 12, 104, 1, 99, 104, 0, 99]),
+    ic = Intcomputer(list_to_dict([105, 1, 6, 104, 0, 99, 105, 0, 12, 104, 1, 99, 4, 0, 99]),
                      'test', Intcomputer.IN_INTERNAL_LIST, Intcomputer.OUT_INTERNAL_LIST)
     ic.run()
     assert ic.list_output() == 1
 
 
 def test_jif() -> None:
-    ic = Intcomputer(list_to_dict([106, 0, 6, 104, 0, 99, 106, 1, 12, 104, 1, 99, 104, 0, 99]),
+    ic = Intcomputer(list_to_dict([6, 0, 6, 4, 0, 99, 106, 1, 12, 4, 1, 99, 4, 0, 99]),
                      'test', Intcomputer.IN_INTERNAL_LIST, Intcomputer.OUT_INTERNAL_LIST)
     ic.run()
     assert ic.list_output() == 1
