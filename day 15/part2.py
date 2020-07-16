@@ -38,6 +38,7 @@ class Droid(object):
         self.oxygenTile: Tile = None
 
         self.shortestPathLength: int = 0
+        self.fillingTime: int = 0
 
     def _get_nearby_from(self, location: Tile) -> List[Tile]:
         """Returns every tiles directly south, north, east and west from a given tile"""
@@ -111,6 +112,41 @@ class Droid(object):
                     if newDistance < distance[neighbor]:
                         parent[neighbor] = minDistanceTile
                         distance[neighbor] = newDistance
+                        
+    def _dijkstra_complete_eval(self, source: Tile) -> Dict[str, Union[Dict[Tile, Tile], Dict[Tile, int]]]:
+        """Dijkstra algorithm implemented so that it associate a distance to
+           every node"""
+           
+        distance: Dict[Tile, int] = {}
+        parent: Dict[Tile, Tile] = {}
+        unexplored: Set[Tile] = set(self.emptyTiles)
+        
+        for emptyTile in unexplored:
+            distance[emptyTile] = maxsize
+            parent[emptyTile] = None
+            
+        distance[source] = 0
+        
+        while len(unexplored) > 0:
+            minDistance: int = maxsize
+            minDistanceTile: Tile = None
+            
+            for testedTile in unexplored:
+                if distance[testedTile] <= minDistance:
+                    minDistanceTile = testedTile
+                    minDistance = distance[testedTile]
+                    
+            unexplored.remove(minDistanceTile)
+            
+            for neighbor in self._get_possible_moves(self._get_nearby_from(minDistanceTile)):
+                if neighbor in unexplored:
+                    newDistance: int = distance[minDistanceTile] + 1
+
+                    if newDistance < distance[neighbor]:
+                        parent[neighbor] = minDistanceTile
+                        distance[neighbor] = newDistance
+                        
+        return {'parent': parent, 'distance': distance}
 
     def _apply_mov(self, destination: Tile, status: int) -> None:
         """Apply a movement given a destination and a status"""
@@ -186,6 +222,17 @@ class Droid(object):
         self.remote.kill()
 
         self.shortestPathLength = len(self._dijkstra((0, 0), self.oxygenTile))
+        
+        # Now getting filling time
+        
+        fillingTime: int = 0
+        distance: Dict[Tile, int] = self._dijkstra_complete_eval(self.oxygenTile)['distance']
+        
+        for tile in distance.keys():
+            if fillingTime < distance[tile]:
+                fillingTime = distance[tile]
+                
+        self.fillingTime = fillingTime
 
 
 if __name__ == "__main__":
@@ -197,3 +244,4 @@ if __name__ == "__main__":
         droid.run()
         print("=== FINISHED CARTOGRAPHY ===")
         print("Oxygen distance :", droid.shortestPathLength)
+        print("Filling time :", droid.fillingTime)
