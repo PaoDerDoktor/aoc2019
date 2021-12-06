@@ -1,60 +1,25 @@
-from typing import List
+from math import floor
 
+def pattern(n: int, i: int) -> int:
+    return [0,1,0,-1][floor((i+1)/(n+1))%4]
 
-class Pattern(object):
-    """Fancy data structure used to iter over a pattern of ints"""
-    
-    def __init__(self, base: List[int]) -> None:
-        """Initialize a Pattern object with a list of ints being it's base"""
+def main():
+    with open("day 16/inputs.txt", "r") as inFile:
+        sequence: list[int] = [int(i) for i in inFile.readline()]
         
-        self.base: List[int] = base
-        
-    def get(self, index: int) -> int:
-        """Returns value at given index if the pattern's base were to
-           repeat endlessly"""
-           
-        return self.base[index % len(self.base)]
-    
-
-def get_pattern(step: int) -> List[int]:
-    """Returns a generated list being thez pattern needed for given step"""
-    
-    return Pattern([ 0 for i in range(step)] +
-                   [ 1 for i in range(step)] +
-                   [ 0 for i in range(step)] +
-                   [-1 for i in range(step)])
-    
-def apply_pattern_to(signal: List[int], step: int) -> int:
-    """applies given step's pattern to given signal"""
-    
-    outputTotal: int = 0
-    pattern: Pattern = get_pattern(step)
-    for i in range(len(signal)):
-        outputTotal += (signal[i] * pattern.get(i+1))
-        
-    return abs(outputTotal) % 10
-
-def apply_phase_to(signal: List[int]) -> List[int]:
-    """Applies a whole FFT phase to a given signal"""
-
-    resultList: List[int] = []
-    
-    for step in range(len(signal)):
-        resultList.append(apply_pattern_to(signal, step+1))
-        
-    return resultList
-
-if __name__ == "__main__":
-    with open("C:\\Projects\\aoc2019\\day 16\\inputs.txt", 'r') as inputs:
-        signal: List[int] = [int(elt) for elt in inputs.readline()]
-        
-        for i in range(100):
-            signal = apply_phase_to(signal)
+        for _ in range(100):
+            nextSequence:list[int] = []
+            for index, value in enumerate(sequence):
+                if index >= round(len(sequence)/2):
+                    nextSequence.append(abs(sum(sequence[index:]))%10)
+                else:
+                    subsequence: int = 0
+                    for numIndex, num in enumerate(sequence[index:], start=index):
+                        subsequence += num*pattern(index, numIndex)
+                    nextSequence.append(abs(subsequence)%10)
+            sequence = nextSequence
             
-        print(signal)
-           
-        finalStr = "" 
-        for value in signal[:8]:
-            finalStr += str(value)
+        print("".join(map(str, sequence[:8])))
         
-        print(finalStr)
+if __name__ == "__main__":
+    main()
